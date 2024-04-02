@@ -26,9 +26,7 @@ function formatDate(timeStamp) {
 //Function to fetch currency rates for a specific currency and date
 async function getCurrencyRates(currency, formatedTime) {
   try {
-    const client = new currencyapi(
-      "cur_live_CsRYtsNNoc4Al4ig6pvjo3FBhrPYXz8C1BUjEclm"
-    );
+    const client = new currencyapi("Your ApiKey");
     const response = await client.historical({
       base_currency: "PLN",
       date: formatedTime,
