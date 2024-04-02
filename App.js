@@ -6,6 +6,7 @@ import { LineChart } from "react-native-chart-kit";
 import DropDownPicker from "react-native-dropdown-picker";
 import currencyapi from "@everapi/currencyapi-js";
 
+//Function to get the date of the past day based on the given offset
 function getPastDay(offset) {
   const today = new Date();
   const pastDate = new Date(today);
@@ -13,6 +14,7 @@ function getPastDay(offset) {
   return pastDate;
 }
 
+//Function to format a given timestamp into a string in 'YYYY-MM-DD' format
 function formatDate(timeStamp) {
   const year = timeStamp.getFullYear();
   const month = (timeStamp.getMonth() + 1).toString().padStart(2, "0");
@@ -21,6 +23,7 @@ function formatDate(timeStamp) {
   return formattedDate;
 }
 
+//Function to fetch currency rates for a specific currency and date
 async function getCurrencyRates(currency, formatedTime) {
   try {
     const client = new currencyapi(
@@ -48,6 +51,7 @@ async function getCurrencyRates(currency, formatedTime) {
   }
 }
 
+//Main component for the application
 export default function App() {
   const screenWidth = Dimensions.get("window").width;
 
@@ -69,10 +73,10 @@ export default function App() {
 
   const data = {
     labels: [
+      getPastDay(4).toDateString(),
       getPastDay(3).toDateString(),
       getPastDay(2).toDateString(),
       getPastDay(1).toDateString(),
-      getPastDay(0).toDateString(),
     ],
     datasets: [
       {
