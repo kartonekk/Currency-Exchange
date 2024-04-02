@@ -1,12 +1,11 @@
 import { StatusBar } from "expo-status-bar";
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { StyleSheet, Text, View, Dimensions } from "react-native";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { LineChart } from "react-native-chart-kit";
 import DropDownPicker from "react-native-dropdown-picker";
-import Button from "./components/Button";
+import currencyapi from "@everapi/currencyapi-js";
 
-//zajmuje się ustaleniem daty przesuniętej o offset
 function getPastDay(offset) {
   const today = new Date();
   const pastDate = new Date(today);
@@ -14,40 +13,60 @@ function getPastDay(offset) {
   return pastDate;
 }
 
-//formatuje date na potrzeby api https://api.currencyapi.com
 function formatDate(timeStamp) {
-  return (
-    timeStamp.getFullYear() +
-    "-" +
-    timeStamp.getDate() +
-    "-" +
-    timeStamp.getMonth()
-  );
+  const year = timeStamp.getFullYear();
+  const month = (timeStamp.getMonth() + 1).toString().padStart(2, "0");
+  const day = timeStamp.getDate().toString().padStart(2, "0");
+  const formattedDate = `${year}-${month}-${day}`;
+  return formattedDate;
 }
 
-//pozwolala na dostęp do danych z api (w aktualnej formie nie postawia danych pod tabele data dla chartu)
-function getCurrencyRates(currency, formatedTime) {
-  const apiKey = "Your Key";
-  const apiUrl =
-    "https://api.currencyapi.com/v3/historical?apikey=" +
-    apiKey +
-    "&currencies=" +
-    currency +
-    "&base_currency=PLN&date=" +
-    formatedTime;
-  fetch(apiUrl, {
-    method: "GET",
-  })
-    .then((res) => res.json())
-    .then((res) => {
-      return res.data.USD.value;
+async function getCurrencyRates(currency, formatedTime) {
+  try {
+    const client = new currencyapi(
+      "cur_live_CsRYtsNNoc4Al4ig6pvjo3FBhrPYXz8C1BUjEclm"
+    );
+    const response = await client.historical({
+      base_currency: "PLN",
+      date: formatedTime,
     });
+    console.log("API Response:", response);
+    if (response && response.data && response.data[currency]) {
+      return response.data[currency].value;
+    } else {
+      console.error("Invalid API response:", response);
+      return null;
+    }
+  } catch (error) {
+    if (error.response && error.response.data) {
+      console.error("Validation error:", error.response.data.message);
+      console.error("Error details:", error.response.data.errors);
+    } else {
+      console.error("Error fetching currency rates:", error);
+    }
+    return null;
+  }
 }
 
 export default function App() {
   const screenWidth = Dimensions.get("window").width;
 
-  //dane dla chartu
+  const [exchangeRates, setExchangeRates] = useState([]);
+  const [selectedCurrency, setSelectedCurrency] = useState("USD");
+
+  useEffect(() => {
+    async function fetchData() {
+      const rates = [];
+      for (let i = 4; i > 0; i--) {
+        const date = formatDate(getPastDay(i));
+        const rate = await getCurrencyRates(selectedCurrency, date);
+        rates.push(rate);
+      }
+      setExchangeRates(rates);
+    }
+    fetchData();
+  }, [selectedCurrency]);
+
   const data = {
     labels: [
       getPastDay(3).toDateString(),
@@ -57,20 +76,19 @@ export default function App() {
     ],
     datasets: [
       {
-        data: [0.6, 0.2, 0.24, 0.4],
+        data: exchangeRates,
       },
     ],
   };
 
-  //staty które pozwalają na śledzienie wybranego pola, nazw i wartości oraz otwarcie dropdown pickera
   const [open, setOpen] = useState(false);
   const [value, setValue] = useState(null);
   const [items, setItems] = useState([
-    { label: "US Dolar", value: "USD" },
-    { label: "UK pound", value: "GBP" },
+    { label: "US Dollar", value: "USD" },
+    { label: "UK Pound", value: "GBP" },
     { label: "Euro", value: "EUR" },
   ]);
-  //struktura aplikacji
+
   return (
     <SafeAreaProvider>
       <View style={styles.container}>
@@ -108,10 +126,12 @@ export default function App() {
             value={value}
             items={items}
             setOpen={setOpen}
-            setValue={setValue}
+            setValue={(currency) => {
+              setValue(currency);
+              setSelectedCurrency(currency);
+            }}
             setItems={setItems}
           />
-          <Button label="Exchange" />
         </View>
         <StatusBar style="auto" />
       </View>
@@ -136,10 +156,9 @@ const styles = StyleSheet.create({
   footerContainer: {
     alignItems: "center",
   },
-
   text: {
     color: "#FAFAF9",
-    fontSize: "25px",
+    fontSize: 25,
   },
   picker: {
     marginBottom: 25,
